@@ -1,0 +1,4 @@
+
+
+docker buildx bake --push
+

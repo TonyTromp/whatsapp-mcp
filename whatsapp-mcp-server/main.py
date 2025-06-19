@@ -1,5 +1,9 @@
+import os
 from typing import List, Dict, Any, Optional
 from mcp.server.fastmcp import FastMCP
+from fastapi import FastAPI
+import uvicorn
+
 from whatsapp import (
     search_contacts as whatsapp_search_contacts,
     list_messages as whatsapp_list_messages,
@@ -246,6 +250,10 @@ def download_media(message_id: str, chat_jid: str) -> Dict[str, Any]:
             "message": "Failed to download media"
         }
 
-if __name__ == "__main__":
-    # Initialize and run the server
-    mcp.run(transport='stdio')
+
+if __name__ == "__main__":    
+    app = FastAPI()
+    app.mount("/sse", mcp.sse_app())    
+    uvicorn.run(app, host="0.0.0.0", port=8000) # Use your desired port
+    # Initialize and run the server on SSE transport    
+    # mcp.run(transport='sse')

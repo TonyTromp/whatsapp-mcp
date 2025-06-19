@@ -1,0 +1,58 @@
+services:
+  whatsapp-bridge:
+    image: edgecrush3r/whatsapp-bridge:latest
+    platform: linux/amd64
+    build:
+      context: ./whatsapp-bridge
+      dockerfile: Dockerfile-bridge
+      platforms:
+        - linux/amd64
+    container_name: whatsapp-bridge
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./whatsapp-bridge/store:/app/store
+    environment:
+      - TZ=UTC
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  whatsapp-mcp-server:
+    image: edgecrush3r/whatsapp-mcp-server:latest
+    platform: linux/amd64
+    build:
+      context: ./whatsapp-mcp-server
+      dockerfile: Dockerfile-mcp
+      platforms:
+        - linux/amd64
+    container_name: whatsapp-mcp-server
+    depends_on:
+      whatsapp-bridge:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      - WHATSAPP_API_BASE_URL=http://whatsapp-bridge:8080/api
+      - MESSAGES_DB_PATH=/app/whatsapp-bridge/store/messages.db
+      - SERVICE_PORT=8000
+      - TZ=UTC
+    volumes:
+      - ./whatsapp-bridge/store:/app/whatsapp-bridge/store:ro
+      - ./media:/app/media
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    command: "uv run python main.py"
+
+volumes:
+  whatsapp-store:
+    driver: local
+
+networks:
+  default:
+    name: whatsapp-mcp-network 
